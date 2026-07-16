@@ -17,16 +17,18 @@ class KostController extends Controller
     {
         $query = Kost::query();
 
-        if ($request->has('search')) {
+        if ($request->has('search') && $request->search !== '') {
             $search = $request->search;
             $query->where('city', 'like', "%{$search}%")
-                  ->orWhere('name', 'like', "%{$search}%");
+                  ->orWhere('name', 'like', "%{$search}%")
+                  ->orWhere('address', 'like', "%{$search}%");
         }
 
         $kosts = $query->with('rooms')->latest()->get();
 
         return Inertia::render('Kosts/Index', [
             'kosts' => $kosts,
+            'filters' => $request->only('search'),
         ]);
     }
 

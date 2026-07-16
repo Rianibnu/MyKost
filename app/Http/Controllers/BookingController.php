@@ -30,6 +30,11 @@ class BookingController extends Controller
             'duration_months' => 'required|integer|min:1',
         ]);
 
+        // Validasi stok
+        if ($room->stock < 1) {
+            return back()->withErrors(['room' => 'Maaf, kamar ini sudah penuh.']);
+        }
+
         $total_price = $room->price_per_month * $request->duration_months;
 
         $booking = Booking::create([
@@ -48,23 +53,27 @@ class BookingController extends Controller
             'status' => 'pending'
         ]);
 
-        return redirect()->route('bookings.index');
+        return redirect()->route('bookings.index')->with('success', 'Booking berhasil dibuat! Silakan lakukan pembayaran.');
     }
 
     public function pay(Request $request, Booking $booking)
     {
+        // Pastikan hanya user yang punya booking yang bisa bayar
+        if ($booking->user_id !== Auth::id()) {
+            abort(403);
+        }
+
         // Simulasi dummy payment (auto verify)
         $payment = $booking->payment;
-        if ($payment) {
+        if ($payment && $payment->status === 'pending') {
             $payment->update([
                 'status' => 'verified'
             ]);
             
-            $booking->update([
-                'status' => 'confirmed'
-            ]);
+            // Status booking jadi menunggu konfirmasi partner
+            // (biarkan pending, partner yang konfirmasi)
         }
 
-        return back();
+        return back()->with('success', 'Pembayaran berhasil dikonfirmasi! Menunggu persetujuan pemilik kost.');
     }
 }

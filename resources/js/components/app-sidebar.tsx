@@ -1,5 +1,5 @@
-import { Link } from '@inertiajs/react';
-import { BookOpen, FolderGit2, LayoutGrid } from 'lucide-react';
+import { Link, usePage } from '@inertiajs/react';
+import { Building, CalendarCheck, Home, LayoutGrid, Search, ClipboardList } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -16,28 +16,50 @@ import {
 import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
 
-const mainNavItems: NavItem[] = [
-    {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
-    },
-];
+function getNavItems(role: string): NavItem[] {
+    if (role === 'partner') {
+        return [
+            {
+                title: 'Dashboard',
+                href: '/partner/dashboard',
+                icon: LayoutGrid,
+            },
+            {
+                title: 'Pesanan Masuk',
+                href: '/partner/bookings',
+                icon: ClipboardList,
+            },
+        ];
+    }
+
+    // Default: user role
+    return [
+        {
+            title: 'Cari Kost',
+            href: '/kosts',
+            icon: Search,
+        },
+        {
+            title: 'Pesanan Saya',
+            href: '/my-bookings',
+            icon: CalendarCheck,
+        },
+    ];
+}
 
 const footerNavItems: NavItem[] = [
     {
-        title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
-        icon: FolderGit2,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#react',
-        icon: BookOpen,
+        title: 'Beranda',
+        href: '/',
+        icon: Home,
     },
 ];
 
 export function AppSidebar() {
+    const { auth } = usePage().props as any;
+    const role = auth?.user?.role || 'user';
+    const mainNavItems = getNavItems(role);
+
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>

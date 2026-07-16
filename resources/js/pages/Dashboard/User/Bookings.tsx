@@ -1,12 +1,20 @@
-import AppLayout from '@/layouts/app-layout';
-import { Head, useForm } from '@inertiajs/react';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Head, useForm, Link, usePage } from '@inertiajs/react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, CreditCard, CheckCircle, Clock } from 'lucide-react';
+import { Calendar, CreditCard, CheckCircle, Clock, XCircle, ExternalLink } from 'lucide-react';
+import { useEffect } from 'react';
+import { toast } from 'sonner';
 
 export default function UserBookings({ bookings }: { bookings: any[] }) {
     const { post, processing } = useForm();
+    const { flash } = usePage().props as any;
+
+    useEffect(() => {
+        if (flash?.success) {
+            toast.success(flash.success);
+        }
+    }, [flash?.success]);
 
     const handlePay = (bookingId: number) => {
         post(`/my-bookings/${bookingId}/pay`);
@@ -14,19 +22,19 @@ export default function UserBookings({ bookings }: { bookings: any[] }) {
 
     const getStatusBadge = (status: string) => {
         switch(status) {
-            case 'pending': return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200"><Clock className="w-3 h-3 mr-1"/> Menunggu Pembayaran</Badge>;
+            case 'pending': return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200"><Clock className="w-3 h-3 mr-1"/> Menunggu</Badge>;
             case 'confirmed': return <Badge className="bg-green-100 text-green-800 hover:bg-green-100 border-none"><CheckCircle className="w-3 h-3 mr-1"/> Dikonfirmasi</Badge>;
-            case 'rejected': return <Badge variant="destructive">Ditolak</Badge>;
+            case 'rejected': return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1"/> Ditolak</Badge>;
             default: return <Badge>{status}</Badge>;
         }
     };
 
     return (
-        <AppLayout breadcrumbs={[{ title: 'Riwayat Pesanan', href: '/my-bookings' }]}>
-            <Head title="Riwayat Pesanan" />
+        <>
+            <Head title="Pesanan Saya" />
             
-            <div className="max-w-4xl mx-auto p-4 lg:p-8">
-                <div className="mb-8">
+            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
+                <div className="mb-4">
                     <h1 className="text-2xl font-bold tracking-tight">Pesanan Saya</h1>
                     <p className="text-muted-foreground">Pantau status penyewaan kost Anda.</p>
                 </div>
@@ -35,10 +43,13 @@ export default function UserBookings({ bookings }: { bookings: any[] }) {
                     <div className="text-center py-20 bg-card rounded-2xl border border-border shadow-sm">
                         <Calendar className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                         <h3 className="text-lg font-medium">Belum ada pesanan</h3>
-                        <p className="mt-1 text-muted-foreground">Anda belum melakukan pemesanan kost apapun.</p>
+                        <p className="mt-1 text-muted-foreground mb-6">Anda belum melakukan pemesanan kost apapun.</p>
+                        <Link href="/kosts">
+                            <Button variant="outline">Cari Kost Sekarang</Button>
+                        </Link>
                     </div>
                 ) : (
-                    <div className="space-y-6">
+                    <div className="space-y-4">
                         {bookings.map((booking) => (
                             <Card key={booking.id} className="overflow-hidden">
                                 <div className="border-b bg-muted/50 px-6 py-3 flex justify-between items-center">
@@ -48,8 +59,15 @@ export default function UserBookings({ bookings }: { bookings: any[] }) {
                                 <CardContent className="p-6">
                                     <div className="flex flex-col md:flex-row justify-between gap-6">
                                         <div>
-                                            <h3 className="text-xl font-bold mb-1">{booking.room.kost.name}</h3>
-                                            <p className="text-muted-foreground mb-4">{booking.room.name} • {booking.room.type}</p>
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <h3 className="text-xl font-bold">{booking.room?.kost?.name || '-'}</h3>
+                                                {booking.room?.kost?.id && (
+                                                    <Link href={`/kosts/${booking.room.kost.id}`} className="text-indigo-600 hover:text-indigo-800">
+                                                        <ExternalLink className="h-4 w-4" />
+                                                    </Link>
+                                                )}
+                                            </div>
+                                            <p className="text-muted-foreground mb-4">{booking.room?.name || '-'} • {booking.room?.type || '-'}</p>
                                             
                                             <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
                                                 <div>
@@ -67,7 +85,7 @@ export default function UserBookings({ bookings }: { bookings: any[] }) {
                                             <span className="text-muted-foreground text-sm block mb-1">Total Tagihan</span>
                                             <span className="text-2xl font-bold text-primary block mb-2">Rp {Number(booking.total_price).toLocaleString('id-ID')}</span>
                                             
-                                            {booking.status === 'pending' && (
+                                            {booking.status === 'pending' && booking.payment?.status === 'pending' && (
                                                 <form onSubmit={(e) => { e.preventDefault(); handlePay(booking.id); }}>
                                                     <Button type="submit" disabled={processing} className="w-full mt-2 bg-indigo-600 hover:bg-indigo-700 text-white">
                                                         <CreditCard className="w-4 h-4 mr-2" /> Konfirmasi Pembayaran
@@ -77,6 +95,9 @@ export default function UserBookings({ bookings }: { bookings: any[] }) {
                                                     </p>
                                                 </form>
                                             )}
+                                            {booking.payment?.status === 'verified' && booking.status === 'pending' && (
+                                                <p className="text-sm text-amber-600 mt-2">Menunggu konfirmasi pemilik kost...</p>
+                                            )}
                                         </div>
                                     </div>
                                 </CardContent>
@@ -85,6 +106,15 @@ export default function UserBookings({ bookings }: { bookings: any[] }) {
                     </div>
                 )}
             </div>
-        </AppLayout>
+        </>
     );
 }
+
+UserBookings.layout = {
+    breadcrumbs: [
+        {
+            title: 'Pesanan Saya',
+            href: '/my-bookings',
+        },
+    ],
+};
